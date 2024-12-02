@@ -164,11 +164,20 @@ class GameManager {
     constructor() {
         this.lives = 3;
         this.score = 0;
-        this.gameState = "playing";
+        this.gameState = "start"; // 初始状态为 "start"
         this.ball = new Ball(width / 2, height - 40);
         this.goalkeeper = new Goalkeeper(width / 2, 60);
-        this.shooter = new Shooter(); // shoot platfrom 
-        this.obstacles = this.createObstacles(); // Randomly generate green balls 随机生成绿色小球
+        this.shooter = new Shooter(); // 射门平台
+        this.obstacles = this.createObstacles(); // 随机生成绿色小球
+    }
+
+    showStartScreen() {
+        fill(255);
+        textSize(40);
+        textAlign(CENTER, CENTER);
+        text("Football Penalty Shootout", width / 2, height / 2 - 40);
+        textSize(20);
+        text("Press SPACE to Start", width / 2, height / 2 + 20);
     }
 
     createObstacles() {
@@ -197,12 +206,12 @@ class GameManager {
     updateGameState() {
         if (this.lives <= 0) {
             this.gameState = "gameOver";
-            this.showGameOver(); // Game over prompt
+            this.showGameOver(); // 游戏结束提示
         }
     }
 
     showGameOver() {
-        noLoop(); // stop the loop of the game
+        noLoop(); // 停止游戏循环
         fill(255, 100, 0);
         textSize(40);
         textAlign(CENTER, CENTER);
@@ -210,7 +219,6 @@ class GameManager {
         textSize(20);
         text("Press 'R' to Restart", width / 2, height / 2 + 50);
     }
-
     checkGoal() {
         if (
             this.ball.position.y < 60 &&
@@ -278,28 +286,34 @@ function setup() {
 }
 
 function draw() {
-    background(0, 120, 60); // green background
+    background(0, 120, 60); // 绿色背景
     drawField();
 
+    if (game.gameState === "start") {
+        // 显示开始界面
+        game.showStartScreen();
+        return; // 停止其他绘制逻辑
+    }
+
     if (game.gameState === "playing") {
-        // check button status
+        // 游戏逻辑
         if (keyIsDown(37)) {
-            // press 'left arrow' 
+            // 左箭头
             game.shooter.move(-1);
         }
         if (keyIsDown(39)) {
-            // press 'right arrow' 
+            // 右箭头
             game.shooter.move(1);
         }
 
         if (!ballLaunched) {
-            game.ball.reset(game.shooter.position.x, game.shooter.position.y - 15); // the yellow ball follows the red platform
+            game.ball.reset(game.shooter.position.x, game.shooter.position.y - 15); // 黄色球跟随平台
         }
         game.goalkeeper.move();
         game.goalkeeper.draw();
         game.shooter.draw();
         game.displayScoreAndLives();
-        game.drawObstacles(); // Draw small green balls
+        game.drawObstacles();
         if (ballLaunched) {
             game.ball.move();
         }
@@ -364,7 +378,13 @@ function mousePressed() {
 
 
 function keyPressed() {
+    if (game.gameState === "start" && key === " ") {
+        // 按空格键开始游戏
+        game.gameState = "playing";
+    }
+
     if (game.gameState === "gameOver" && key.toLowerCase() === "r") {
+        // 按 R 键重新开始
         game = new GameManager();
         loop();
     }
