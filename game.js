@@ -265,8 +265,8 @@ class GameManager {
     displayScoreAndLives() {  // Display the score and lives
         fill(255);
         textSize(20);
-        text(`Score: ${this.score}`, 50 , 30);
-        text(`Lives: ${this.lives}`, width -75, 30);
+        text(`Score: ${this.score}`, width / 4 - 50, 30);
+        text(`Lives: ${this.lives}`, 3 * width / 4 + 50, 30);
     }
 
     drawObstacles() {
