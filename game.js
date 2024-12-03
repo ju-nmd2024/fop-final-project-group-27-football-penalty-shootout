@@ -1,7 +1,7 @@
-// Ball launch state variables 球的发射状态变量
+// Ball launch state variables
 let ballLaunched = false;
 
-// Ball 类
+// Ball
 class Ball {
     constructor(x, y) {
         this.position = createVector(x, y);
@@ -9,17 +9,20 @@ class Ball {
         this.radius = 10;
     }
 
-    move() {
+    move(game) {
         this.position.add(this.speed);
 
-        // Boundary collision detection
+        // Detection of touching left and right boundaries
         if (this.position.x < 0 || this.position.x > width) {
-            this.speed.x *= -1; // Horizontal rebound 水平方向反弹
+            game.lives--; // lost a live
+            game.resetBall(); // reset the position of the ball
         }
-    }
 
-    checkOutOfBounds() {
-        return this.position.y < 0 || this.position.y > height;
+        // Detect hitting upper and lower boundaries (if necessary)
+        if (this.position.y < 0 || this.position.y > height) {
+            game.lives--; // lost a live
+            game.resetBall(); // reset the position of the ball
+        }
     }
 
     reset(x, y) {
@@ -28,31 +31,57 @@ class Ball {
     }
 
     launch(targetX, targetY) {
-        // Calculate the velocity vector towards the mouse position and normalize 计算朝向鼠标位置的速度向量并归一化
+        // Calculate the velocity vector towards the mouse position and normalize
         let direction = createVector(targetX - this.position.x, targetY - this.position.y);
         direction.normalize();
         this.speed.set(direction.mult(6)); // Set the speed
     }
 
-    // Draw the football
     draw() {
         fill(255, 255, 0);
         ellipse(this.position.x, this.position.y, this.radius * 2);
     }
-
-// The collision between football and shooter
-    checkCollisionWithShooter(shooter) {
-        let topEdge = shooter.position.y - shooter.height / 2;
-        let leftEdge = shooter.position.x - shooter.width / 2;
-        let rightEdge = shooter.position.x + shooter.width / 2;
-
+    checkOutOfBounds() {
         return (
-            this.position.y + this.radius >= topEdge &&
-            this.position.x >= leftEdge &&
-            this.position.x <= rightEdge &&
-            this.speed.y > 0 // Make sure the ball collides when it falls from above 确保球是从上方落下时碰撞
+            this.position.x < 0 ||
+            this.position.x > width ||
+            this.position.y < 0 ||
+            this.position.y > height
         );
     }
+    
+
+// The collision between football and shooter
+handleCollisions() {
+    // Detecting collisions with players
+    if (this.ball.checkCollisionWithShooter(this.shooter)) {
+        this.ball.speed.y *= -1; // rebound
+        this.ball.position.y = this.shooter.position.y - this.shooter.height / 2 - this.ball.radius; // change the position
+        this.shooter.kickBall(); // Trigger kick animation
+    }
+
+    //Detect collision with the green ball (obstacle)
+    for (let i = this.obstacles.length - 1; i >= 0; i--) {
+        let obstacle = this.obstacles[i];
+        if (this.ball.checkCollisionWithObstacle(obstacle)) {
+            this.ball.speed.x *= -1; // refraction
+            this.ball.speed.y *= -1;
+            this.obstacles.splice(i, 1); // Remove obstacles
+        }
+    }
+}
+checkCollisionWithShooter(shooter) {
+    let topEdge = shooter.position.y - shooter.height / 2;
+    let leftEdge = shooter.position.x - shooter.width / 2;
+    let rightEdge = shooter.position.x + shooter.width / 2;
+
+    return (
+        this.position.y + this.radius >= topEdge &&
+        this.position.x >= leftEdge &&
+        this.position.x <= rightEdge &&
+        this.speed.y > 0 // Make sure the ball hits from above
+    );
+}
 
     checkCollisionWithObstacle(obstacle) {
         let d = dist(this.position.x, this.position.y, obstacle.position.x, obstacle.position.y);
@@ -60,11 +89,11 @@ class Ball {
     }
 }
 
-// Obstacle 类（small green ball 绿色小球）
+// Obstacle 类（small green ball）
 class Obstacle {
     constructor(x, y) {
         this.position = createVector(x, y);
-        this.radius = 13; // Reduce the ball radius 缩小小球半径
+        this.radius = 13; // Reduce the ball radius
     }
 
     draw() {
@@ -85,9 +114,9 @@ class Goalkeeper {  // Goalkeeper's movement
     move() {
         this.position.x += this.speed * this.direction;
 
-        // 限制守门员的移动范围在大禁区（罚球区）
+        //Limit the goalkeeper's range of movement in the penalty area (penalty area)
         if (this.position.x < 150 + this.radius || this.position.x > 450 - this.radius) {
-            this.direction *= -1; // Reverse Direction 反转方向
+            this.direction *= -1; // Reverse Direction
         }
     }
 
@@ -102,16 +131,16 @@ class Goalkeeper {  // Goalkeeper's movement
     }
 }
 
-// Shooter（ shoot platform 射门平台）
-// Shooter（射门平台，替换为球员模型）
+// Shooter（ shoot platform ）
+// Shooter（Shooting platform, replaced with player model）
 class Shooter {
     constructor() {
-        this.position = createVector(width / 2, height - 30); // 初始位置
-        this.width = 80; // 球员宽度（与守门员一致）
-        this.height = 10; // 球员高度
-        this.speed = 5; // 球员移动速度
-        this.kick = false; // 踢球状态
-        this.kickFrame = 0; // 踢球动画帧数
+        this.position = createVector(width / 2, height - 30); // initial position
+        this.width = 80; // Player width (same as goalkeeper)
+        this.height = 10; // Player height
+        this.speed = 5; // Player movement speed
+        this.kick = false; // Playing status
+        this.kickFrame = 0; // Kick animation frames
     }
 
     move(direction) {
@@ -123,31 +152,31 @@ class Shooter {
         push();
         translate(this.position.x, this.position.y);
 
-        // 绘制蓝白条纹衣服
+        // Darw the jersey with blue and white stripes
         for (let i = -20; i < 20; i += 10) {
-            fill(i % 20 === 0 ? 0 : 255, 255, i % 20 === 0 ? 255 : 255); // 蓝白相间
-            rect(i, -40, 10, 40); // 每条宽10，高40
+            fill(i % 20 === 0 ? 0 : 255, 255, i % 20 === 0 ? 255 : 255); // blue and white stripes
+            rect(i, -40, 10, 40); // width=10，height=40
         }
 
-        // 头部
+        // head
         fill(0, 0, 0);
         ellipse(0, -60, 30, 30);
 
-        // 腿部
+        // legs
         fill(0, 0, 0);
         if (this.kick) {
-            // 踢球动作
+            // kick animation
             if (this.kickFrame < 10) {
-                rect(-15, 0, 10, 30); // 静止腿
-                rect(5, 10 - this.kickFrame, 10, 30); // 摆动腿
+                rect(-15, 0, 10, 30); // Still leg
+                rect(5, 10 - this.kickFrame, 10, 30); // Move leg
             } else {
-                this.kick = false; // 动作完成，复位
+                this.kick = false; // Action completed, reset
                 this.kickFrame = 0;
             }
             this.kickFrame++;
         } else {
-            rect(-15, 0, 10, 30); // 左腿
-            rect(5, 0, 10, 30); // 右腿
+            rect(-15, 0, 10, 30); // left leg
+            rect(5, 0, 10, 30); // right leg
         }
         pop();
     }
@@ -159,17 +188,18 @@ class Shooter {
 
 
 
-// GameManager 类
+// GameManager
 class GameManager {
     constructor() {
         this.lives = 3;
         this.score = 0;
-        this.gameState = "start"; // 初始状态为 "start"
-        this.ball = new Ball(width / 2, height - 40);
+        this.gameState = "start";
+        this.ball = new Ball(width / 2, height - 40); // Create a new Ball object
         this.goalkeeper = new Goalkeeper(width / 2, 60);
-        this.shooter = new Shooter(); // 射门平台
-        this.obstacles = this.createObstacles(); // 随机生成绿色小球
+        this.shooter = new Shooter();
+        this.obstacles = this.createObstacles();
     }
+    
 
     showStartScreen() {
         fill(255);
@@ -184,19 +214,19 @@ class GameManager {
         let obstacles = [];
         while (obstacles.length < 10) {
             let x = random(50, width - 50);
-            let y = random(150, 350); // 限制 Y 坐标在 150-350 范围
+            let y = random(150, 350); // Limit the Y coordinate to the range 150-350
             let valid = true;
 
-            // Check if it is too close to other obstacles 检查是否太靠近其他障碍物
+            // Check if it is too close to other obstacles
             for (let obstacle of obstacles) {
                 let d = dist(x, y, obstacle.position.x, obstacle.position.y);
-                if (d < 18) { // 间隔为绿色小球的直径（8*2 + 间隔10）
+                if (d < 18) { // The interval is the diameter of the green ball (8*2 + interval 10)
                     valid = false;
                     break;
                 }
             }
 
-            if (valid) {
+            if (valid) { 
                 obstacles.push(new Obstacle(x, y));
             }
         }
@@ -206,12 +236,12 @@ class GameManager {
     updateGameState() {
         if (this.lives <= 0) {
             this.gameState = "gameOver";
-            this.showGameOver(); // 游戏结束提示
+            this.showGameOver(); // Game over prompt
         }
     }
 
     showGameOver() {
-        noLoop(); // 停止游戏循环
+        noLoop(); // Stop the game loop
         fill(255, 100, 0);
         textSize(40);
         textAlign(CENTER, CENTER);
@@ -230,28 +260,29 @@ class GameManager {
         }
     }
 
-    handleOutOfBounds() {  // Avoid out of bounds
-        if (this.ball.checkOutOfBounds()) {
-            this.lives--;
-            this.resetBall();
+    handleOutOfBounds() {
+        if (this.ball.checkOutOfBounds()) { // Check if the ball is out of bounds
+            this.lives--; // decrease lives
+            this.resetBall(); //reset the position of the ball
         }
     }
+    
 
     handleCollisions() {
-        // 检测与球员的碰撞
+        // Detecting collisions with players
         if (this.ball.checkCollisionWithShooter(this.shooter)) {
-            this.ball.speed.y *= -1; // 球反弹
-            this.ball.position.y = this.shooter.position.y - this.shooter.height / 2 - this.ball.radius; // 调整球的位置
-            this.shooter.kickBall(); // 触发球员踢球动作
+            this.ball.speed.y *= -1; // Ball bounce
+            this.ball.position.y = this.shooter.position.y - this.shooter.height / 2 - this.ball.radius; // change the position of the ball
+            this.shooter.kickBall(); //Trigger the player's kicking action
         }
     
-        // 检测与绿色小球（障碍物）的碰撞
+        // Detect collision with the green ball (obstacle)
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             let obstacle = this.obstacles[i];
             if (this.ball.checkCollisionWithObstacle(obstacle)) {
-                this.ball.speed.x *= -1; // 折射
+                this.ball.speed.x *= -1; // refraction
                 this.ball.speed.y *= -1;
-                this.obstacles.splice(i, 1); // 移除障碍物
+                this.obstacles.splice(i, 1); // Remove obstacles
             }
         }
     }
@@ -286,44 +317,43 @@ function setup() {
 }
 
 function draw() {
-    background(0, 120, 60); // 绿色背景
+    background(0, 120, 60); // green background
     drawField();
 
     if (game.gameState === "start") {
-        // 显示开始界面
         game.showStartScreen();
-        return; // 停止其他绘制逻辑
+        return;
     }
 
     if (game.gameState === "playing") {
-        // 游戏逻辑
-        if (keyIsDown(37)) {
-            // 左箭头
+        if (keyIsDown(37)) { // left arrow
             game.shooter.move(-1);
         }
-        if (keyIsDown(39)) {
-            // 右箭头
+        if (keyIsDown(39)) { // right arrow
             game.shooter.move(1);
         }
 
         if (!ballLaunched) {
-            game.ball.reset(game.shooter.position.x, game.shooter.position.y - 15); // 黄色球跟随平台
+            game.ball.reset(game.shooter.position.x, game.shooter.position.y - 15);
         }
+
         game.goalkeeper.move();
         game.goalkeeper.draw();
         game.shooter.draw();
         game.displayScoreAndLives();
         game.drawObstacles();
         if (ballLaunched) {
-            game.ball.move();
+            game.ball.move(game); // Passing the game object
         }
         game.ball.draw();
         game.handleCollisions();
-        game.checkGoal();
-        game.handleOutOfBounds();
+        game.checkGoal();   
+        game.handleOutOfBounds(); // Check if the ball is out of bounds
         game.updateGameState();
     }
 }
+
+
 
 function drawField() {
     background(0, 120, 60); // Green grass
@@ -371,20 +401,20 @@ function drawField() {
 function mousePressed() {
     if (!ballLaunched && game.gameState === "playing") {
         ballLaunched = true;
-        game.ball.launch(mouseX, mouseY); // 发射球
-        game.shooter.kickBall(); // 触发踢球动作
+        game.ball.launch(mouseX, mouseY); //Play the ball
+        game.shooter.kickBall(); //Trigger kick action
     }
 }
 
 
 function keyPressed() {
     if (game.gameState === "start" && key === " ") {
-        // 按空格键开始游戏
+        // Press the spacebar to start the game
         game.gameState = "playing";
     }
 
     if (game.gameState === "gameOver" && key.toLowerCase() === "r") {
-        // 按 R 键重新开始
+        // Press R to restart
         game = new GameManager();
         loop();
     }
