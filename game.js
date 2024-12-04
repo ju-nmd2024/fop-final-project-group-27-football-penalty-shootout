@@ -89,7 +89,7 @@ checkCollisionWithShooter(shooter) {
     }
 }
 
-// Obstacle 类（small green ball）
+// Obstacle（small green ball）
 class Obstacle {
     constructor(x, y) {
         this.position = createVector(x, y);
@@ -122,10 +122,6 @@ class Goalkeeper {  // Goalkeeper's movement
 
     // Draw the Goalkeeper
     draw() { 
-        fill(242,200,103);
-        rect(this.position.x, this.position.y,this.radius * 2,10,10);
-        rect(this.position.x, this.position.y,this.radius * -2,10,10);
-
         fill(0,0,0);
         ellipse(this.position.x, this.position.y, this.radius * 2);
     }
@@ -154,7 +150,7 @@ class Shooter {
 
         // Darw the jersey with blue and white stripes
         for (let i = -20; i < 20; i += 10) {
-            fill(i % 20 === 0 ? 0 : 255, 255, i % 20 === 0 ? 255 : 255); // blue and white stripes
+            fill(i % 20 === 255 ? 0 : 255, 0, i % 20 === 0 ? 0 :0); // blue and white stripes
             rect(i, -40, 10, 40); // width=10，height=40
         }
 
